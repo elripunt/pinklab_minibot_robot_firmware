@@ -20,6 +20,9 @@ uint8_t g_rx_index = 0;
 
 // Motor Related
 uint8_t g_motor_enabled = 0;
+uint8_t g_l_lamp_val = 0;
+uint8_t g_r_lamp_val = 0;
+
 int16_t g_l_motor_target = 0;
 int16_t g_r_motor_target = 0;
 int32_t g_l_current_encoder = 0;
@@ -52,6 +55,9 @@ Encoder r_enc(20, 21);
 
 void setup() {  
   g_motor_enabled = 0;
+  g_l_lamp_val = 0;
+  g_r_lamp_val = 0;
+
   g_l_motor_target = 0;
   g_r_motor_target = 0;
   g_l_current_encoder = 0;
@@ -118,6 +124,9 @@ void loop() {
       g_l_motor_target = (int16_t)((g_recv_data[1] << 8) | g_recv_data[2]);
       g_r_motor_target = (int16_t)((g_recv_data[3] << 8) | g_recv_data[4]);
 
+      g_l_lamp_val = g_recv_data[5];
+      g_r_lamp_val = g_recv_data[6];      
+
       if(need_res)
       {
         send_resonse_protocol(len);
@@ -172,6 +181,9 @@ ISR(TIMER4_COMPA_vect)
     analogWrite(12, -1 * r_control_output);
   }
 
+
+  analogWrite(22, 255 - g_l_lamp_val);
+  analogWrite(23, 255 - g_r_lamp_val);
   
   
   Serial3.print("EN: ");
@@ -261,19 +273,22 @@ void send_current_state(void)
   send_data[10] = (uint8_t)(g_r_current_encoder >> 8);
   send_data[11] = (uint8_t)(g_r_current_encoder);
 
-  send_data[12] = 10;
+  send_data[12] = g_l_lamp_val;
+  send_data[13] = g_l_lamp_val;  
+
+  send_data[14] = 12;
 
   int sum = 0;
-  for(int i = 0; i < 10; i++)
+  for(int i = 0; i < 12; i++)
   {
     sum += send_data[3+i];    
   }
-  send_data[13] = (uint8_t)sum;
+  send_data[15] = (uint8_t)sum;
 
-  send_data[14] = 0xFA;
-  send_data[15] = 0xFD;
+  send_data[16] = 0xFA;
+  send_data[17] = 0xFD;
 
-  Serial.write(send_data, 16);
+  Serial.write(send_data, 18);
 }
 
 

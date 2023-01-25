@@ -44,14 +44,14 @@ Arduino -> PC
 | ---    | ---  | ---  | ---  | ---      | ---    | ---      | ---    | ---   |
 | 0xFA   | 0xFE | 0x91 | 0x01 | 0x01     | 0x3    | 0x96      | 0xFA   |  0xFD |
 
-### Set target speeds for Motors
+### Set command for Motors
 
 PC -> Arduino
 
-| Header |      | CMD  | DATA |       |       |       | Response | Length | Checksum | Footer |       |
-| ---    | ---  | ---  | ---  |  ---  | ---   | ---   | ---      | ---    | ---      | ---    | ---   |
-| 0xFA   | 0xFE | 0x02 | 0x00 | 0x00  | 0x00  | 0x00  | 0x0      | 0x6    | 0x8      | 0xFA   |  0xFD |
-|        |      |      | LEFT |       | RIGHT |       |          |        |          |        |       |
+| Header |      | CMD  | DATA |       |       |       |       |        |         |  Response | Length | Checksum | Footer |       |
+| ---    | ---  | ---  | ---  |  ---  | ---   | ---   | ---   | ---    |  ---    |  ---      | ---    |  ---     | ---    | ---   |
+| 0xFA   | 0xFE | 0x02 | 0x01 |  0x00 | 0x00  | 0x00  | 0x00  | 0x0    |  0x0    |  0x0      |   0x9  | 0xC      | 0xFA   |  0xFD |
+|        |      |      | EN   |  LEFT |       | RIGHT |       | L_LAMP |  R_LAMP |           |        |          |        |       |
 
 
 Data:
@@ -69,7 +69,7 @@ PC -> Arduino
 
 Arduino -> PC
 
-| Header |      | CMD  | DATA |       |     |     |     |         |     |     |     | Length | Checksum | Footer |       |
-| ---    | ---  | ---  | ---  | ---   | --- | --- | --- | ---     | --- | --- | --- |  ---   | ---      | ---    | ---   |
-| 0xFA   | 0xFE | 0x93 | 0x01 | 0x0   | 0x0 | 0x0 | 0x0 | 0x0     | 0x0 | 0x0 | 0x0 | 0x0A   | 0x96     | 0xFA   | 0xFD  |
-|        |      |      | EN   | L_POS |    |      |     | R_ROS   |     |     |     |        |          |        |       |
+| Header |      | CMD  | DATA |       |     |     |     |         |     |     |     |        |        |  Length | Checksum | Footer |       |
+| ---    | ---  | ---  | ---  | ---   | --- | --- | --- | ---     | --- | --- | --- | ---    | ---    |   ---   | ---      | ---    | ---   |
+| 0xFA   | 0xFE | 0x93 | 0x01 | 0x0   | 0x0 | 0x0 | 0x0 | 0x0     | 0x0 | 0x0 | 0x0 | 0x0    | 0x0    |  0x0C   | 0xA1     | 0xFA   | 0xFD  |
+|        |      |      | EN   | L_POS |    |      |     | R_ROS   |     |     |     | L_LAMP | R_LAMP |         |          |        |       |
