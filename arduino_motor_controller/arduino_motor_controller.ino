@@ -1,17 +1,24 @@
 #include <Encoder.h>
 #include <ArduPID.h>
 
-/*
-9: PWM L_FORWARD
-10: PWM L_BACKWARD
-11: PWM R_FORWARD
-12: PWM R_BACKWARD
+#define L_MOTOR_IN1 10
+#define L_MOTOR_IN2 11
+#define L_MOTOR_PWM 12
 
-18: L_ENC_A
-19: L_ENC_B
-20: R_ENC_A
-21: R_ENC_B
-*/
+#define R_MOTOR_IN1 7
+#define R_MOTOR_IN2 8
+#define R_MOTOR_PWM 13
+
+#define MOTOR_STBY 9
+
+#define L_ENC_A 2
+#define L_ENC_B 22
+#define R_ENC_A 3
+#define R_ENC_B 23
+
+#define L_LED 44
+#define R_LED 6
+
 
 // Packet Data
 uint8_t g_rx_buf[256] = {0, };
@@ -49,11 +56,27 @@ ArduPID r_motor_controller;
 int32_t old_l_enc = 0;
 int32_t old_r_enc = 0;
 
-Encoder l_enc(18, 19);
-Encoder r_enc(20, 21);
+Encoder l_enc(L_ENC_A, L_ENC_B);
+Encoder r_enc(R_ENC_A, R_ENC_B);
 
 
 void setup() {  
+  // Pin Mode
+  pinMode(L_MOTOR_IN1, OUTPUT);
+  pinMode(L_MOTOR_IN2, OUTPUT);
+  pinMode(L_MOTOR_PWM, OUTPUT);
+  pinMode(R_MOTOR_IN1, OUTPUT);
+  pinMode(R_MOTOR_IN2, OUTPUT);
+  pinMode(R_MOTOR_PWM, OUTPUT);
+  pinMode(MOTOR_STBY, OUTPUT);
+
+  digitalWrite(MOTOR_STBY, HIGH);
+
+  pinMode(L_LED, OUTPUT);
+  pinMode(R_LED, OUTPUT);
+
+
+  // Initialize
   g_motor_enabled = 0;
   g_l_lamp_val = 0;
   g_r_lamp_val = 0;
@@ -84,19 +107,21 @@ void setup() {
   l_motor_controller.begin(&l_current_vel, &l_control_output, &l_target_vel, p_gain, i_gain, d_gain);  
   l_motor_controller.setOutputLimits(-255, 255);
   // l_motor_controller.setBias(255.0 / 2.0);
-  l_motor_controller.setWindUpLimits(-5, 5);
+  l_motor_controller.setDeadBand(-10, 10);
+  l_motor_controller.setWindUpLimits(-10, 10);
   
   r_motor_controller.begin(&r_current_vel, &r_control_output, &r_target_vel, p_gain, i_gain, d_gain);  
   r_motor_controller.setOutputLimits(-255, 255);
   // r_motor_controller.setBias(255.0 / 2.0);
-  r_motor_controller.setWindUpLimits(-5, 5);
+  r_motor_controller.setDeadBand(-10, 10);
+  r_motor_controller.setWindUpLimits(-10, 10);
 
   l_motor_controller.start();
   r_motor_controller.start();
 
   // Start communication
   Serial3.begin(115200); // DEBUG  
-  Serial.begin(921600);
+  Serial.begin(500000);
 }
 
 void loop() {
@@ -116,7 +141,7 @@ void loop() {
 
       if(need_res)
       {
-        send_resonse_protocol(len);
+        send_resonse_protocol(len);        
       }
     }
     else if(cmd == 0x2)
@@ -145,8 +170,8 @@ void loop() {
 // Callback function for Timer4 Compare Interrupt
 ISR(TIMER4_COMPA_vect)
 {
-  g_l_current_encoder = l_enc.read();
-  g_r_current_encoder = r_enc.read();
+  g_l_current_encoder =  l_enc.read();
+  g_r_current_encoder =  r_enc.read();
 
   l_current_vel = g_l_current_encoder - g_l_last_encoder;
   r_current_vel = g_r_current_encoder - g_r_last_encoder;
@@ -154,36 +179,48 @@ ISR(TIMER4_COMPA_vect)
   g_l_last_encoder = g_l_current_encoder;
   g_r_last_encoder = g_r_current_encoder;
 
+
+  if(!g_motor_enabled)
+  {
+    digitalWrite(MOTOR_STBY, LOW);
+    return;
+  }
+
+  digitalWrite(MOTOR_STBY, HIGH);
   
   l_target_vel = g_l_motor_target / 50.0;
   r_target_vel = g_r_motor_target / 50.0;
 
   l_motor_controller.compute();
-  r_motor_controller.compute();
-
+  r_motor_controller.compute();  
+  
   if(l_control_output >= 0)
   {
-    analogWrite(9, l_control_output);
-    analogWrite(10, 0);
+    // FORWARD(CCW)
+    digitalWrite(L_MOTOR_IN1, HIGH);
+    digitalWrite(L_MOTOR_IN2, LOW);
+    analogWrite(L_MOTOR_PWM, l_control_output);    
   }
   else {
-    analogWrite(9, 0);
-    analogWrite(10, -1 * l_control_output);
+    digitalWrite(L_MOTOR_IN1, LOW);
+    digitalWrite(L_MOTOR_IN2, HIGH);
+    analogWrite(L_MOTOR_PWM, -1 * l_control_output);    
   }
 
   if(r_control_output >= 0)
   {
-    analogWrite(11, r_control_output);
-    analogWrite(12, 0);
+    digitalWrite(R_MOTOR_IN1, HIGH);
+    digitalWrite(R_MOTOR_IN2, LOW);
+    analogWrite(R_MOTOR_PWM, r_control_output);    
   }
   else {
-    analogWrite(11, 0);
-    analogWrite(12, -1 * r_control_output);
+    digitalWrite(R_MOTOR_IN1, LOW);
+    digitalWrite(R_MOTOR_IN2, HIGH);
+    analogWrite(R_MOTOR_PWM, -1 * r_control_output);    
   }
 
-
-  analogWrite(22, 255 - g_l_lamp_val);
-  analogWrite(23, 255 - g_r_lamp_val);
+  analogWrite(L_LED, g_l_lamp_val);
+  analogWrite(R_LED, g_r_lamp_val);
   
   
   Serial3.print("EN: ");
