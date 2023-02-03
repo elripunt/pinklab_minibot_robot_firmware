@@ -19,6 +19,9 @@
 #define L_LED 44
 #define R_LED 6
 
+#define TRIG 25
+#define ECHO A0
+
 
 // Packet Data
 uint8_t g_rx_buf[256] = {0, };
@@ -36,6 +39,7 @@ int32_t g_l_current_encoder = 0;
 int32_t g_r_current_encoder = 0;
 int32_t g_l_last_encoder = 0;
 int32_t g_r_last_encoder = 0;
+uint16_t g_range_sensor_val = 0;
 
 // PID Related
 double l_current_vel = 0;
@@ -46,9 +50,9 @@ double r_current_vel = 0;
 double r_control_output = 0;
 double r_target_vel = 0;
 
-double p_gain = 12;
+double p_gain = 9;
 double i_gain = 1;
-double d_gain = 0.5;
+double d_gain = 0.8;
 
 ArduPID l_motor_controller;
 ArduPID r_motor_controller;
@@ -75,6 +79,9 @@ void setup() {
   pinMode(L_LED, OUTPUT);
   pinMode(R_LED, OUTPUT);
 
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
+
 
   // Initialize
   g_motor_enabled = 0;
@@ -87,6 +94,8 @@ void setup() {
   g_r_current_encoder = 0;
   g_l_last_encoder = 0;
   g_r_last_encoder = 0;
+
+  g_range_sensor_val = 0;
 
   l_enc.write(0);
   r_enc.write(0);
@@ -102,6 +111,16 @@ void setup() {
   TCCR4B |= (1 << WGM12);
   TCCR4B |= (1 << CS12) | (1 << CS10); 
   TIMSK4 |= (1 << OCIE4A);
+
+  TCCR5A = 0; // set entire TCCR4A register to 0
+  TCCR5B = 0; // set entire TCCR4B register to 0
+  TCNT5  = 0; // initialize counter value to 0
+
+  OCR5A = 3124; //= (16MHz) / (5Hz*1024) - 1 (must be <65536)
+
+  TCCR5B |= (1 << WGM12);
+  TCCR5B |= (1 << CS12) | (1 << CS10); 
+  TIMSK5 |= (1 << OCIE5A);
   sei();
 
   l_motor_controller.begin(&l_current_vel, &l_control_output, &l_target_vel, p_gain, i_gain, d_gain);  
@@ -121,7 +140,7 @@ void setup() {
 
   // Start communication
   Serial3.begin(115200); // DEBUG  
-  Serial.begin(500000);
+  Serial.begin(1000000);
 }
 
 void loop() {
@@ -133,7 +152,7 @@ void loop() {
   { 
     // response for command
     uint8_t cmd = g_recv_data[0];
-    uint8_t need_res = g_recv_data[len - 1];
+    uint8_t need_res = g_recv_data[len - 1];    
 
     if(cmd == 0x1)
     { 
@@ -146,11 +165,13 @@ void loop() {
     }
     else if(cmd == 0x2)
     {
-      g_l_motor_target = (int16_t)((g_recv_data[1] << 8) | g_recv_data[2]);
-      g_r_motor_target = (int16_t)((g_recv_data[3] << 8) | g_recv_data[4]);
+      g_motor_enabled = g_recv_data[1];
+      
+      g_l_motor_target = (int16_t)((g_recv_data[2] << 8) | g_recv_data[3]);
+      g_r_motor_target = (int16_t)((g_recv_data[4] << 8) | g_recv_data[5]);
 
-      g_l_lamp_val = g_recv_data[5];
-      g_r_lamp_val = g_recv_data[6];      
+      g_l_lamp_val = g_recv_data[6];
+      g_r_lamp_val = g_recv_data[7];      
 
       if(need_res)
       {
@@ -223,27 +244,44 @@ ISR(TIMER4_COMPA_vect)
   analogWrite(R_LED, g_r_lamp_val);
   
   
-  Serial3.print("EN: ");
-  Serial3.print(g_motor_enabled);
+  // Serial3.print("EN: ");
+  // Serial3.print(g_motor_enabled);
 
-  Serial3.print("  L_ENC:  ");
-  Serial3.print(g_l_current_encoder);
-  Serial3.print("  L_CUR:  ");
-  Serial3.print(l_current_vel);
-  Serial3.print("  L_TAR:  ");
-  Serial3.print(l_target_vel);
-  Serial3.print("  L_OUT:  ");
-  Serial3.print(l_control_output);  
+  // Serial3.print("  L_ENC:  ");
+  // Serial3.print(g_l_current_encoder);
+  // Serial3.print("  L_CUR:  ");
+  // Serial3.print(l_current_vel);
+  // Serial3.print("  L_TAR:  ");
+  // Serial3.print(l_target_vel);
+  // Serial3.print("  L_OUT:  ");
+  // Serial3.print(l_control_output);  
 
-  Serial3.print("  RENC:  ");
-  Serial3.print(g_r_current_encoder);
-  Serial3.print("  R_CUR:  ");
-  Serial3.print(r_current_vel);
-  Serial3.print("  R_TAR:  ");
-  Serial3.print(r_target_vel);
-  Serial3.print("  R_OUT:  ");
-  Serial3.print(r_control_output);
-  Serial3.println("");
+  // Serial3.print("  RENC:  ");
+  // Serial3.print(g_r_current_encoder);
+  // Serial3.print("  R_CUR:  ");
+  // Serial3.print(r_current_vel);
+  // Serial3.print("  R_TAR:  ");
+  // Serial3.print(r_target_vel);
+  // Serial3.print("  R_OUT:  ");
+  // Serial3.print(r_control_output);
+  // Serial3.println("");
+}
+
+ISR(TIMER5_COMPA_vect)
+{
+  uint16_t duration, distance;
+
+  digitalWrite(TRIG, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG, LOW);
+
+  duration = pulseIn (ECHO, HIGH); 
+  distance = duration * 17 / 100; 
+
+  g_range_sensor_val = distance;
+  // Serial3.println(g_range_sensor_val);
 }
 
 
@@ -291,7 +329,7 @@ uint8_t process_protocol()
 
 void send_current_state(void)
 {
-  uint8_t send_data[16] = {0, };
+  uint8_t send_data[20] = {0, };
 
   send_data[0] = 0xFA;
   send_data[1] = 0xFE;
@@ -311,21 +349,24 @@ void send_current_state(void)
   send_data[11] = (uint8_t)(g_r_current_encoder);
 
   send_data[12] = g_l_lamp_val;
-  send_data[13] = g_l_lamp_val;  
+  send_data[13] = g_r_lamp_val;  
 
-  send_data[14] = 12;
+  send_data[14] = (uint8_t)(g_range_sensor_val >> 8);
+  send_data[15] = (uint8_t)g_range_sensor_val;
+
+  send_data[16] = 14;
 
   int sum = 0;
-  for(int i = 0; i < 12; i++)
+  for(int i = 0; i < 14; i++)
   {
     sum += send_data[3+i];    
   }
-  send_data[15] = (uint8_t)sum;
+  send_data[17] = (uint8_t)sum;
 
-  send_data[16] = 0xFA;
-  send_data[17] = 0xFD;
+  send_data[18] = 0xFA;
+  send_data[19] = 0xFD;
 
-  Serial.write(send_data, 18);
+  Serial.write(send_data, 20);
 }
 
 
