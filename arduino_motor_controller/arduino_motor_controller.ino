@@ -22,6 +22,8 @@
 #define TRIG 25
 #define ECHO A0
 
+#define BUZZER_PIN 24
+
 
 // Packet Data
 uint8_t g_rx_buf[256] = {0, };
@@ -50,9 +52,9 @@ double r_current_vel = 0;
 double r_control_output = 0;
 double r_target_vel = 0;
 
-double p_gain = 9;
-double i_gain = 1;
-double d_gain = 0.8;
+double p_gain = 6;
+double i_gain = 2;
+double d_gain = 0.2;
 
 ArduPID l_motor_controller;
 ArduPID r_motor_controller;
@@ -81,6 +83,8 @@ void setup() {
 
   pinMode(TRIG, OUTPUT);
   pinMode(ECHO, INPUT);
+
+  pinMode(BUZZER_PIN, OUTPUT);
 
 
   // Initialize
@@ -162,6 +166,12 @@ void loop() {
       {
         send_resonse_protocol(len);        
       }
+
+      tone(BUZZER_PIN, 1000);
+      delay(100);
+      noTone(BUZZER_PIN);
+
+            
     }
     else if(cmd == 0x2)
     {
@@ -269,19 +279,19 @@ ISR(TIMER4_COMPA_vect)
 
 ISR(TIMER5_COMPA_vect)
 {
-  uint16_t duration, distance;
+  // uint16_t duration, distance;
 
-  digitalWrite(TRIG, LOW);
-  delayMicroseconds(2);
-  digitalWrite(TRIG, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(TRIG, LOW);
+  // digitalWrite(TRIG, LOW);
+  // delayMicroseconds(2);
+  // digitalWrite(TRIG, HIGH);
+  // delayMicroseconds(10);
+  // digitalWrite(TRIG, LOW);
 
-  duration = pulseIn (ECHO, HIGH); 
-  distance = duration * 17 / 100; 
+  // duration = pulseIn (ECHO, HIGH); 
+  // distance = duration * 17 / 100; 
 
-  g_range_sensor_val = distance;
-  // Serial3.println(g_range_sensor_val);
+  // g_range_sensor_val = distance;
+  // // Serial3.println(g_range_sensor_val);
 }
 
 
