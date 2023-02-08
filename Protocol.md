@@ -69,7 +69,7 @@ PC -> Arduino
 
 Arduino -> PC
 
-| Header |      | CMD  | DATA |       |     |     |     |         |     |     |     |        |        |  Length | Checksum | Footer |       |
-| ---    | ---  | ---  | ---  | ---   | --- | --- | --- | ---     | --- | --- | --- | ---    | ---    |   ---   | ---      | ---    | ---   |
-| 0xFA   | 0xFE | 0x93 | 0x01 | 0x0   | 0x0 | 0x0 | 0x0 | 0x0     | 0x0 | 0x0 | 0x0 | 0x0    | 0x0    |  0x0C   | 0xA1     | 0xFA   | 0xFD  |
-|        |      |      | EN   | L_POS |    |      |     | R_ROS   |     |     |     | L_LAMP | R_LAMP |         |          |        |       |
+| Header |      | CMD  | DATA |       |     |     |     |         |     |     |     |        |        |        |        |  Length | Checksum | Footer |       |
+| ---    | ---  | ---  | ---  | ---   | --- | --- | --- | ---     | --- | --- | --- | ---    | ---    |   ---  | ---    |   ---   | ---      | ---    | ---   |
+| 0xFA   | 0xFE | 0x93 | 0x01 | 0x0   | 0x0 | 0x0 | 0x0 | 0x0     | 0x0 | 0x0 | 0x0 | 0x0    | 0x0    | 0x0    | 0x0    |  0x0E   | 0xA1     | 0xFA   | 0xFD  |
+|        |      |      | EN   | L_POS |    |      |     | R_ROS   |     |     |     | L_LAMP | R_LAMP | Sonar Sensor  |        |         |          |        |       |
