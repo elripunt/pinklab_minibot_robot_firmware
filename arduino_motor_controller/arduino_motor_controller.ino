@@ -116,15 +116,6 @@ void setup() {
   TCCR4B |= (1 << CS12) | (1 << CS10); 
   TIMSK4 |= (1 << OCIE4A);
 
-  TCCR5A = 0; // set entire TCCR4A register to 0
-  TCCR5B = 0; // set entire TCCR4B register to 0
-  TCNT5  = 0; // initialize counter value to 0
-
-  OCR5A = 3124; //= (16MHz) / (5Hz*1024) - 1 (must be <65536)
-
-  TCCR5B |= (1 << WGM12);
-  TCCR5B |= (1 << CS12) | (1 << CS10); 
-  TIMSK5 |= (1 << OCIE5A);
   sei();
 
   l_motor_controller.begin(&l_current_vel, &l_control_output, &l_target_vel, p_gain, i_gain, d_gain);  
@@ -219,8 +210,8 @@ ISR(TIMER4_COMPA_vect)
 
   digitalWrite(MOTOR_STBY, HIGH);
   
-  l_target_vel = g_l_motor_target / 50.0;
-  r_target_vel = g_r_motor_target / 50.0;
+  l_target_vel = g_l_motor_target;
+  r_target_vel = g_r_motor_target;
 
   l_motor_controller.compute();
   r_motor_controller.compute();  
@@ -276,24 +267,6 @@ ISR(TIMER4_COMPA_vect)
   // Serial3.print(r_control_output);
   // Serial3.println("");
 }
-
-ISR(TIMER5_COMPA_vect)
-{
-  // uint16_t duration, distance;
-
-  // digitalWrite(TRIG, LOW);
-  // delayMicroseconds(2);
-  // digitalWrite(TRIG, HIGH);
-  // delayMicroseconds(10);
-  // digitalWrite(TRIG, LOW);
-
-  // duration = pulseIn (ECHO, HIGH); 
-  // distance = duration * 17 / 100; 
-
-  // g_range_sensor_val = distance;
-  // // Serial3.println(g_range_sensor_val);
-}
-
 
 uint8_t process_protocol()
 {
